@@ -13,6 +13,7 @@ from torch import nn
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 from torchvision.utils import make_grid
+from lightning.pytorch.utilities.rank_zero import rank_zero_only
 from omegaconf import DictConfig
 
 
@@ -21,6 +22,7 @@ class GANLoss(nn.Module):
         super().__init__()
         self.register_buffer('real_label', torch.tensor(target_real_label))
         self.register_buffer('fake_label', torch.tensor(target_fake_label))
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         self.gan_mode = gan_mode
         if gan_mode == 'lsgan':
             self.loss = nn.MSELoss()
@@ -72,7 +74,7 @@ class MapGan(pl.LightningModule):
     def forward(self) -> None:
         self.fake_B = self.G(self.real_A)
         
-    def backward_G(self) -> None:
+    def backward_D(self) -> None:
         fake_AB = torch.cat((self.real_A, self.fake_B), 1)
         pred_fake = self.D(fake_AB.detach())
         self.loss_D_fake = self.criterionGAN(pred_fake, False)
@@ -84,6 +86,43 @@ class MapGan(pl.LightningModule):
         self.loss_D = (self.loss_D_fake + self.loss_D_real) * 0.5
         self.loss_D.backward()
         
+        self.log(
+            "D_real",
+            self.loss_D_real,
+            on_step=True,
+            on_epoch=False,
+            prog_bar=False,
+            logger=True,
+            sync_dist=True,
+        )
+        self.log(
+            "D_fake",
+            self.loss_D_fake,
+            on_step=True,
+            on_epoch=False,
+            prog_bar=False,
+            logger=True,
+            sync_dist=True,
+        )
+        self.log(
+            "D_real",
+            self.loss_D_real,
+            on_step=True,
+            on_epoch=False,
+            prog_bar=False,
+            logger=True,
+            sync_dist=True,
+        )
+        self.log(
+            "D",
+            self.loss_D,
+            on_step=True,
+            on_epoch=False,
+            prog_bar=True,
+            logger=True,
+            sync_dist=True,
+        )
+        
     def backward_G(self) -> None:
         fake_AB = torch.cat((self.real_A, self.fake_B), 1)
         pred_fake = self.D(fake_AB)
@@ -93,6 +132,16 @@ class MapGan(pl.LightningModule):
         
         self.loss_G = self.loss_G_GAN + self.loss_G_L1
         self.loss_G.backward()
+        
+        self.log(
+            "G",
+            self.loss_G,
+            on_step=True,
+            on_epoch=False,
+            prog_bar=True,
+            logger=True,
+            sync_dist=True,
+        )
         
     def _set_requires_grad(self, nets, requires_grad=False):
         if not isinstance(nets, list):
@@ -115,3 +164,9 @@ class MapGan(pl.LightningModule):
         g_opt.zero_grad()
         self.backward_G()
         g_opt.step()
+        
+    @rank_zero_only
+    def on_validation_epoch_end(self, *args, **kwargs) -> None:
+        fake = self.denormalize(self.fake_B)
+        grid = make_grid(fake, nrow=4).permute(1, 2, 0).cpu().numpy()
+        grid = (grid)
