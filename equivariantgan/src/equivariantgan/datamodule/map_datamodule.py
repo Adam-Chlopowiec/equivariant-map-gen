@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader, Dataset
 import transformers
 from transformers import AutoImageProcessor
 
-from dataset.map_dataset import MapDataset
+from equivariantgan.dataset.map_dataset import MapDataset
 
 
 logger = getLogger(__name__)
