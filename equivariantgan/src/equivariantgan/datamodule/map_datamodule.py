@@ -60,7 +60,7 @@ class MapDataModule(pl.LightningDataModule):
     def val_dataloader(self) -> DataLoader:
         return DataLoader(
             MapDataset(
-                self.data_root / 'val',
+                self.data_root / 'test',
                 self.target_size
             ),
             batch_size=self.batch_size,

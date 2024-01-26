@@ -29,7 +29,11 @@ class MapDataset(Dataset):
         self.transforms = T.Compose(
             T.Resize(self.target_size),
             T.PILToTensor(),
-            T.ConvertImageDtype(torch.float)
+            T.ConvertImageDtype(torch.float),
+            T.Normalize(
+                [0.5, 0.5, 0.5],
+                [0.5, 0.5, 0.5]
+            )
         )
         
         self.terrain_paths = glob.glob(self.terrain_map, '*')
