@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from guidedcontrolcom.gan.pix2pix.generator import DownConvNormAct
+from equivariantgan.gan.pix2pix.generator import DownConvNormAct
 
 
 class UNetDiscriminator(nn.Module):

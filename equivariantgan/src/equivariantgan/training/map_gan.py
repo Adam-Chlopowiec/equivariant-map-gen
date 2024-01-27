@@ -20,6 +20,8 @@ from omegaconf import DictConfig
 
 from equivariantgan.gan.pix2pix.discriminator import UNetDiscriminator
 from equivariantgan.gan.pix2pix.generator import UNetGenerator
+from equivariantgan.gan.e2_pix2pix.discriminator import E2UNetDiscriminator
+from equivariantgan.gan.e2_pix2pix.generator import E2UNetGenerator
 
 
 class GANLoss(nn.Module):
@@ -29,10 +31,6 @@ class GANLoss(nn.Module):
         self.register_buffer('fake_label', torch.tensor(target_fake_label))
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         self.gan_mode = gan_mode
-        self.denormalize = T.Normalize(
-            [-1, -1, -1],
-            [2, 2, 2]
-        )
         if gan_mode == 'lsgan':
             self.loss = nn.MSELoss()
         elif gan_mode == 'vanilla':
@@ -58,23 +56,32 @@ class MapGan(pl.LightningModule):
     def __init__(
         self,
         lambda_l1: float,
-        AtoB: str,
+        AtoB: bool,
+        gan_type: str,
         *args,
         **kwargs
     ) -> None:
         self.save_hyperparameters()
         
-        self.G = UNetGenerator()
-        self.D = UNetDiscriminator()
+        if gan_type == "pix2pix":
+            self.G = UNetGenerator(**kwargs["generator"])
+            self.D = UNetDiscriminator(**kwargs["discriminator"])
+        else:
+            self.G = E2UNetGenerator(**kwargs["generator"])
+            self.D = E2UNetDiscriminator(**kwargs["discriminator"])
         
         self.criterionGAN = GANLoss(self.hparams.loss_gan_mode).to(self.device)
         self.criterionL1 = nn.L1Loss()
         self.lambda_l1 = lambda_l1
         self.AtoB = AtoB
+        self.denormalize = T.Normalize(
+            [-1, -1, -1],
+            [2, 2, 2]
+        )
         
     def configure_optimizers(self) -> Tuple[nn.Module, nn.Module]:
-        g_opt = torch.optim.Adam(self.G.parameters(), lr=2e-4)
-        d_opt = torch.optim.Adam(self.D.parameters(), lr=2e-4)
+        g_opt = torch.optim.Adam(self.G.parameters(), lr=self.hparams.lr_g)
+        d_opt = torch.optim.Adam(self.D.parameters(), lr=self.hparams.lr_d)
         return g_opt, d_opt
         
     def set_input(self, input: Dict[str, torch.Tensor]) -> None:
@@ -94,7 +101,7 @@ class MapGan(pl.LightningModule):
         fake_B = self.forward(real_A)
         
         # Update D
-        d_opt.zero_grad()
+        d_opt.zero_grad(set_to_none=True)
         log_real_loss = torch.tensor(0, dtype=torch.float32, device=self.device)
         log_fake_loss = torch.tensor(0, dtype=torch.float32, device=self.device)
         
@@ -107,7 +114,7 @@ class MapGan(pl.LightningModule):
         loss_D_real = self.criterionGAN(pred_real, True)
         
         loss_D = (loss_D_fake + loss_D_real) * 0.5
-        loss_D.backward()
+        self.manual_backward(loss_D)
         
         log_real_loss += loss_D_real.detach()
         log_fake_loss += loss_D_fake.detach()
@@ -117,7 +124,7 @@ class MapGan(pl.LightningModule):
             "D_real",
             log_real_loss,
             on_step=True,
-            on_epoch=False,
+            on_epoch=True,
             prog_bar=False,
             logger=True,
             sync_dist=True,
@@ -126,7 +133,7 @@ class MapGan(pl.LightningModule):
             "D_fake",
             log_fake_loss,
             on_step=True,
-            on_epoch=False,
+            on_epoch=True,
             prog_bar=False,
             logger=True,
             sync_dist=True,
@@ -135,7 +142,7 @@ class MapGan(pl.LightningModule):
             "D",
             (log_real_loss + log_fake_loss) * 0.5,
             on_step=True,
-            on_epoch=False,
+            on_epoch=True,
             prog_bar=True,
             logger=True,
             sync_dist=True,
@@ -145,7 +152,7 @@ class MapGan(pl.LightningModule):
         log_gan_G_loss = torch.tensor(0, dtype=torch.float32, device=self.device)
         log_l1_G_loss = torch.tensor(0, dtype=torch.float32, device=self.device)
         
-        g_opt.zero_grad()
+        g_opt.zero_grad(set_to_none=True)
         self._set_requires_grad(self.D, False)
         
         fake_AB = torch.cat((real_A, fake_B), 1)
@@ -154,8 +161,7 @@ class MapGan(pl.LightningModule):
         
         loss_G_L1 = self.criterionL1(fake_B, real_B) * self.lambda_l1
         loss_G = loss_G_GAN + loss_G_L1
-        
-        loss_G.backward()
+        self.manual_backward(loss_G)
         
         g_opt.step()
         self._set_requires_grad(self.D, True)
@@ -167,7 +173,7 @@ class MapGan(pl.LightningModule):
             "G_GAN",
             log_gan_G_loss,
             on_step=True,
-            on_epoch=False,
+            on_epoch=True,
             prog_bar=False,
             logger=True,
             sync_dist=True,
@@ -176,7 +182,7 @@ class MapGan(pl.LightningModule):
             "G_L1",
             log_l1_G_loss,
             on_step=True,
-            on_epoch=False,
+            on_epoch=True,
             prog_bar=False,
             logger=True,
             sync_dist=True,
@@ -185,7 +191,7 @@ class MapGan(pl.LightningModule):
             "G",
             log_gan_G_loss + log_l1_G_loss,
             on_step=True,
-            on_epoch=False,
+            on_epoch=True,
             prog_bar=True,
             logger=True,
             sync_dist=True,
@@ -207,11 +213,36 @@ class MapGan(pl.LightningModule):
         real_B = batch['roadmap' if self.AtoB else 'terrain'].to(self.device)
         fake_B = self.forward(real_A)
         fake = self.denormalize(fake_B)
+        real_B = self.denormalize(real_B)
         
         grid = make_grid(fake, nrow=4).permute(1, 2, 0).cpu().numpy()
         grid = (grid * 255.).astype(np.uint8)
         grid = Image.fromarray(grid)
         self.logger.log_image(key='test/fake', images=[grid])  
+        
+        grid = make_grid(real_B, nrow=4).permute(1, 2, 0).cpu().numpy()
+        grid = (grid * 255.).astype(np.uint8)
+        grid = Image.fromarray(grid)
+        self.logger.log_image(key='test/real_B', images=[grid])
+        
+        grid = make_grid(real_A, nrow=4).permute(1, 2, 0).cpu().numpy()
+        grid = (grid * 255.).astype(np.uint8)
+        grid = Image.fromarray(grid)
+        self.logger.log_image(key='test/real_A', images=[grid])
+        
+        cat = torch.cat((fake, real_B), 0)
+        grid = make_grid(cat, nrow=8).permute(1, 2, 0).cpu().numpy()
+        grid = (grid * 255.).astype(np.uint8)
+        grid = Image.fromarray(grid)
+        self.logger.log_image(key='test/fake-real', images=[grid])
+        
+        # for fake, real in zip(fake, real_B):
+        #     grid = make_grid(torch.cat(fake.unsqueeze(0), real.unsqueeze(0), dim=0), nrow=1).permute(1, 2, 0).cpu().numpy()
+        #     grid = (grid * 255.).astype(np.uint8)
+        #     grid = Image.fromarray(grid)
+        #     self.logger.log_image(key='test/fake-real', images=[grid])
+        
+        
         
     def on_validation_epoch_end(self, *args, **kwargs) -> None:
         batch = next(iter(self.trainer.datamodule.val_dataloader()))

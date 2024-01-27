@@ -305,15 +305,15 @@ class E2UNetGenerator(nn.Module):
 
         # downblock
         self.down1 = E2DownConvNormAct(
-            in_channels=regular_feature_type(self.r2_act, 64 // self.channel_div),
-            in_channels=regular_feature_type(self.r2_act, 128 // self.channel_div),
+            in_type=regular_feature_type(self.r2_act, 64 // self.channel_div),
+            out_type=regular_feature_type(self.r2_act, 128 // self.channel_div),
             residual=False,
         )
         in_type = self.down1.out_type
         
         self.down2 = E2DownConvNormAct(
-            in_channels=regular_feature_type(self.r2_act, 128 // self.channel_div),
-            in_channels=regular_feature_type(self.r2_act, 256 // self.channel_div),
+            in_type=regular_feature_type(self.r2_act, 128 // self.channel_div),
+            out_type=regular_feature_type(self.r2_act, 256 // self.channel_div),
             residual=False,
         )
         in_type = self.down2.out_type
@@ -330,8 +330,8 @@ class E2UNetGenerator(nn.Module):
             self.r1_G = self.G
         
         self.down3 = E2DownConvNormAct(
-            in_channels=regular_feature_type(self.r1_gspace, 256 // self.channel_div),
-            in_channels=regular_feature_type(self.r1_gspace, 512 // self.channel_div),
+            in_type=regular_feature_type(self.r1_gspace, 256 // self.channel_div),
+            out_type=regular_feature_type(self.r1_gspace, 512 // self.channel_div),
             residual=False,
         )
         in_type = self.down3.out_type
@@ -348,8 +348,8 @@ class E2UNetGenerator(nn.Module):
             self.r2_G = self.r1_G
         
         self.down4 = E2DownConvNormAct(
-            in_channels=regular_feature_type(self.r2_gspace, 512 // self.channel_div),
-            in_channels=regular_feature_type(self.r2_gspace, 512 // self.channel_div),
+            in_type=regular_feature_type(self.r2_gspace, 512 // self.channel_div),
+            out_type=regular_feature_type(self.r2_gspace, 512 // self.channel_div),
             residual=False,
         )
         in_type = self.down4.out_type

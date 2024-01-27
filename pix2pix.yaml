@@ -1,0 +1,46 @@
+datamodule:
+  data_root: C:\\Users\\Adam\\Desktop\\Studia\\magisterskie\\semestr2\\pdp\\equivariant-map-gen\\storage\\data
+  target_size: 256
+  num_workers: 8
+  batch_size: 8
+
+lightning_model:
+  gan_type: pix2pix
+  generator:
+    in_channels: 3
+    out_channels: 3
+    image_size: 256
+
+  discriminator:
+    in_channels: 3
+    out_channels: 1
+    image_size: 256
+
+  loss_gan_mode: lsgan
+  lambda_l1: 100.0
+  AtoB: True
+  lr_g: 2e-4
+  lr_d: 2e-4
+
+logger:
+  project: map_gan
+  entity: adamchlopowiec
+  log_model: True
+  mode: online
+  save_dir: C:\\Users\\Adam\\Desktop\\Studia\\magisterskie\\semestr2\\pdp\\equivariant-map-gen\\storage
+
+callbacks:
+  model_checkpoint:
+    verbose: True
+    every_n_epochs: 5
+
+training:
+  trainer:
+    accelerator: gpu
+    devices: 1
+    min_epochs: 1
+    max_epochs: 500
+    precision: bf16-mixed
+    strategy: auto
+    inference_mode: True
+    deterministic: warn

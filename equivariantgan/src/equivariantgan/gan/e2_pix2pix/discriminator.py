@@ -10,9 +10,9 @@ import escnn.nn as enn
 from escnn.nn.modules.utils import indexes_from_labels
 from escnn import gspaces
 
-from guidedcontrolcom.gan.e2_pix2pix.generator import E2DownConvNormAct, trivial_feature_type, regular_feature_type, create_conv_instance, named_apply, init_weights
+from equivariantgan.gan.e2_pix2pix.generator import E2DownConvNormAct, trivial_feature_type, regular_feature_type, create_conv_instance, named_apply, init_weights
 
-class UNetDiscriminator(nn.Module):
+class E2UNetDiscriminator(nn.Module):
 
     def __init__(
         self, 
@@ -67,8 +67,8 @@ class UNetDiscriminator(nn.Module):
 
         # downblock
         self.down1 = E2DownConvNormAct(
-            in_channels=regular_feature_type(self.r2_act, 64 // self.channel_div),
-            in_channels=regular_feature_type(self.r2_act, 128 // self.channel_div),
+            in_type=regular_feature_type(self.r2_act, 64 // self.channel_div),
+            out_type=regular_feature_type(self.r2_act, 128 // self.channel_div),
             residual=False,
         )
         in_type = self.down1.out_type
@@ -85,8 +85,8 @@ class UNetDiscriminator(nn.Module):
             self.r1_G = self.G
         
         self.down2 = E2DownConvNormAct(
-            in_channels=regular_feature_type(self.r1_gspace, 128 // self.channel_div),
-            in_channels=regular_feature_type(self.r1_gspace, 256 // self.channel_div),
+            in_type=regular_feature_type(self.r1_gspace, 128 // self.channel_div),
+            out_type=regular_feature_type(self.r1_gspace, 256 // self.channel_div),
             residual=False,
         )
         in_type = self.down2.out_type
@@ -103,8 +103,8 @@ class UNetDiscriminator(nn.Module):
             self.r2_G = self.G
 
         self.down3 = E2DownConvNormAct(
-            in_channels=regular_feature_type(self.r2_gspace, 256 // self.channel_div),
-            in_channels=regular_feature_type(self.r2_gspace, 512 // self.channel_div),
+            in_type=regular_feature_type(self.r2_gspace, 256 // self.channel_div),
+            out_type=regular_feature_type(self.r2_gspace, 512 // self.channel_div),
             residual=False,
         )
         in_type = self.down3.out_type

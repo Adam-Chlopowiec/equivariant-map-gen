@@ -6,6 +6,7 @@ from logging import getLogger
 import hydra
 import torch
 import pytorch_lightning as pl
+from pytorch_lightning.loggers import WandbLogger
 from copy import deepcopy
 from omegaconf import DictConfig, OmegaConf
 
@@ -41,17 +42,16 @@ def run_experiment():
 
     # initialize model
     logger.info(f"Instantiate <{config.lightning_model._target_}>")
-    model = hydra.utils.instantiate(
-        config.lightning_model,
-        _recursive_=False
-    )
+    model = MapGan(**config.lightning_model)
 
     # initalize logger
     logger.info(f"Instantiate <{config.logger._target_}>")
-    pl_logger = hydra.utils.instantiate(config.logger)
+    pl_logger = WandbLogger(**config.logger)
     pl_logger.config = config
 
-    callbacks = build_callbacks(config.callbacks)
+    callbacks = [
+        pl.callbacks.ModelCheckpoint(**config.callbacks.model_checkpoint),
+    ]
 
     logger.info("Instantiate <Trainer>")
     trainer = pl.Trainer(
@@ -60,6 +60,7 @@ def run_experiment():
     # train_loader = datamodule.train_dataloader()
     # trainer.fit(model, train_dataloaders=[datamodule.train_dataloader()], val_dataloaders=[datamodule.test_dataloader()])
     trainer.fit(model, datamodule=datamodule)
+    trainer.test(model, datamodule=datamodule)
 
 
 if __name__ == "__main__":

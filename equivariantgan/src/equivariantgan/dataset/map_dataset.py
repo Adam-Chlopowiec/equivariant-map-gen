@@ -28,8 +28,9 @@ class MapDataset(Dataset):
         
         self.transforms = T.Compose(
             T.Resize(self.target_size),
-            T.PILToTensor(),
-            T.ConvertImageDtype(torch.float),
+            T.ToTensor(),
+            # T.PILToTensor(),
+            # T.ConvertImageDtype(torch.float),
             T.Normalize(
                 [0.5, 0.5, 0.5],
                 [0.5, 0.5, 0.5]
