@@ -33,7 +33,7 @@ class MapDataModule(pl.LightningDataModule):
         batch_size: int,
     ) -> None:
         super().__init__()
-        self.data_root = Path(data_root)
+        self.data_root = data_root
         self.target_size = target_size
         self.num_workers = num_workers
         self.batch_size = batch_size
@@ -47,7 +47,7 @@ class MapDataModule(pl.LightningDataModule):
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
             MapDataset(
-                self.data_root / 'train',
+                self.data_root + '/train',
                 self.target_size
             ),
             batch_size=self.batch_size,
@@ -60,7 +60,7 @@ class MapDataModule(pl.LightningDataModule):
     def val_dataloader(self) -> DataLoader:
         return DataLoader(
             MapDataset(
-                self.data_root / 'test',
+                self.data_root + '/test',
                 self.target_size
             ),
             batch_size=self.batch_size,
@@ -73,7 +73,7 @@ class MapDataModule(pl.LightningDataModule):
     def test_dataloader(self) -> DataLoader:
         return DataLoader(
             MapDataset(
-                self.data_root / 'test',
+                self.data_root + '/test',
                 self.target_size
             ),
             batch_size=self.batch_size,

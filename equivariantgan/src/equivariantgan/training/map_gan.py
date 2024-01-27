@@ -61,6 +61,7 @@ class MapGan(pl.LightningModule):
         *args,
         **kwargs
     ) -> None:
+        super().__init__()
         self.save_hyperparameters()
         
         if gan_type == "pix2pix":
@@ -75,9 +76,12 @@ class MapGan(pl.LightningModule):
         self.lambda_l1 = lambda_l1
         self.AtoB = AtoB
         self.denormalize = T.Normalize(
-            [-1, -1, -1],
-            [2, 2, 2]
+            # [-1, -1, -1],
+            # [2, 2, 2]
+            [-1],
+            [2]
         )
+        self.automatic_optimization = False
         
     def configure_optimizers(self) -> Tuple[nn.Module, nn.Module]:
         g_opt = torch.optim.Adam(self.G.parameters(), lr=self.hparams.lr_g)
@@ -109,7 +113,7 @@ class MapGan(pl.LightningModule):
         pred_fake = self.D(fake_AB.detach())
         loss_D_fake = self.criterionGAN(pred_fake, False)
         
-        real_AB = torch.cat((self.real_A, self.real_B), 1)
+        real_AB = torch.cat((real_A, real_B), 1)
         pred_real = self.D(real_AB)
         loss_D_real = self.criterionGAN(pred_real, True)
         

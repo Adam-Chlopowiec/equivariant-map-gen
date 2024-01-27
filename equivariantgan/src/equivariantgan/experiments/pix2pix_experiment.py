@@ -24,38 +24,35 @@ parser.add_argument('--config', required=True, help='Path to config')
 
 
 def run_experiment():
-    opt, _ = parser.parse_args()
+    opt = parser.parse_args()
     with open(opt.config, 'r') as f:
-        config = OmegaConf.load(f)
+        config = yaml.safe_load(f)
     
     # initialize datamodule
     logger.info(f"Instantiate Datamodule")
     datamodule = MapDataModule(
-        data_root=config.datamodule.data_root,
-        target_size=config.datamodule.target_size,
-        num_workers=config.datamodule.num_workers,
-        batch_size=config.datamodule.batch_size
+        **config["datamodule"]
     )
 
     datamodule.setup()
     datamodule.prepare_data()
 
     # initialize model
-    logger.info(f"Instantiate <{config.lightning_model._target_}>")
-    model = MapGan(**config.lightning_model)
+    logger.info(f"Instantiate MapGan")
+    model = MapGan(**config["lightning_model"])
 
     # initalize logger
-    logger.info(f"Instantiate <{config.logger._target_}>")
-    pl_logger = WandbLogger(**config.logger)
+    logger.info(f"Instantiate WandbLogger")
+    pl_logger = WandbLogger(**config["logger"])
     pl_logger.config = config
 
     callbacks = [
-        pl.callbacks.ModelCheckpoint(**config.callbacks.model_checkpoint),
+        pl.callbacks.ModelCheckpoint(**config["callbacks"]["model_checkpoint"]),
     ]
 
     logger.info("Instantiate <Trainer>")
     trainer = pl.Trainer(
-        logger=pl_logger, callbacks=callbacks, **config.training.trainer
+        logger=pl_logger, callbacks=callbacks, **config["training"]["trainer"]
     )
     # train_loader = datamodule.train_dataloader()
     # trainer.fit(model, train_dataloaders=[datamodule.train_dataloader()], val_dataloaders=[datamodule.test_dataloader()])

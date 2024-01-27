@@ -22,29 +22,33 @@ class MapDataset(Dataset):
     ) -> None:
         super().__init__()
         self.data_root = data_root
-        self.terrain_map = self.data_root / 'terrain/'
-        self.roadmap_map = self.data_root / 'roadmap/'
+        self.terrain_map = self.data_root + '/terrain/*'
+        self.roadmap_map = self.data_root + '/roadmap/*'
         self.target_size = target_size
         
-        self.transforms = T.Compose(
+        self.transforms = T.Compose([
             T.Resize(self.target_size),
             T.ToTensor(),
             # T.PILToTensor(),
             # T.ConvertImageDtype(torch.float),
             T.Normalize(
-                [0.5, 0.5, 0.5],
-                [0.5, 0.5, 0.5]
+                # [0.5, 0.5, 0.5],
+                # [0.5, 0.5, 0.5]
+                [0.5],
+                [0.5]
             )
-        )
+        ])
         
-        self.terrain_paths = glob.glob(self.terrain_map, '*')
-        self.roadmap_paths = glob.glob(self.roadmap_map, '*')
+        self.terrain_paths = glob.glob(self.terrain_map)
+        self.roadmap_paths = glob.glob(self.roadmap_map)
         
     def __len__(self) -> int:
         return len(self.terrain_paths)
     
     def _getimg(self, path: str) -> torch.Tensor:
         img = Image.open(path)
+        # img_np = np.asarray(img)
+        # print(img_np.shape)
         return self.transforms(img)
     
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:

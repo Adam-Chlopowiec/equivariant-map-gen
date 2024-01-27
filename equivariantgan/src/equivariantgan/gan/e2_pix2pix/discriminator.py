@@ -16,7 +16,6 @@ class E2UNetDiscriminator(nn.Module):
 
     def __init__(
         self, 
-        gspace: escnn.gspaces.GSpace,
         N: int,
         in_channels: int = 3, 
         out_channels: int = 1, 
@@ -36,7 +35,7 @@ class E2UNetDiscriminator(nn.Module):
         self.out_channels = out_channels
         self.image_size = image_size
 
-        self.r2_act = gspace
+        self.r2_act = escnn.gspaces.flipRot2dOnR2(N=N)
         self.G = self.r2_act.fibergroup
         self.restriction = restriction
         self.deltaorthonormal = deltaorthonormal
@@ -69,7 +68,6 @@ class E2UNetDiscriminator(nn.Module):
         self.down1 = E2DownConvNormAct(
             in_type=regular_feature_type(self.r2_act, 64 // self.channel_div),
             out_type=regular_feature_type(self.r2_act, 128 // self.channel_div),
-            residual=False,
         )
         in_type = self.down1.out_type
 
@@ -80,32 +78,30 @@ class E2UNetDiscriminator(nn.Module):
             self.add_module("r1", restriction_layer)
             self.r1 = restriction_layer
         else:
-            self.r1 = enn.IdentityModule()
+            self.r1 = enn.IdentityModule(in_type)
             self.r1_gspace = self.r2_act
             self.r1_G = self.G
         
         self.down2 = E2DownConvNormAct(
-            in_type=regular_feature_type(self.r1_gspace, 128 // self.channel_div),
+            in_type=self.r1.out_type,
             out_type=regular_feature_type(self.r1_gspace, 256 // self.channel_div),
-            residual=False,
         )
         in_type = self.down2.out_type
 
         if self.restriction >= 2:
-            self.r1_gspace, self.r1_G, restriction_layer, in_type = self.restrict_layer(
+            self.r2_gspace, self.r2_G, restriction_layer, in_type = self.restrict_layer(
                 (0, self.N // self.r1_subgroup if self.N >= 8 else self.N // 2), in_type
             )
             self.add_module("r2", restriction_layer)
             self.r2 = restriction_layer
         else:
-            self.r2 = enn.IdentityModule()
+            self.r2 = enn.IdentityModule(in_type)
             self.r2_gspace = self.r2_act
             self.r2_G = self.G
 
         self.down3 = E2DownConvNormAct(
-            in_type=regular_feature_type(self.r2_gspace, 256 // self.channel_div),
+            in_type=self.r2.out_type,
             out_type=regular_feature_type(self.r2_gspace, 512 // self.channel_div),
-            residual=False,
         )
         in_type = self.down3.out_type
 

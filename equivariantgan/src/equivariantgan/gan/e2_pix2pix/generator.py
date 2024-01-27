@@ -8,6 +8,7 @@ import escnn.nn as enn
 from escnn.nn.modules.utils import indexes_from_labels
 from escnn import gspaces
 from functools import partial
+import math
 
 
 def regular_feature_type(gspace: gspaces.GSpace, channels: int) -> enn.FieldType:
@@ -218,9 +219,9 @@ class E2UpConvNormDropAct(nn.Module):
                 frequencies_cutoff=lambda r: 3*r,
                 conv_type="r2convtrans"
             ),
-            enn.InnerBatchNorm(out_type),
-            enn.FieldDropout(out_type, p),
-            enn.ReLU(out_type)
+            enn.InnerBatchNorm(conv_out_type),
+            enn.FieldDropout(conv_out_type, p),
+            enn.ReLU(conv_out_type)
         )
         if res_type.gspace != out_type.gspace:
             restrict_layer, res_type = self.restrict_layer((0, out_type.gspace._sg_id[1]), res_type)
@@ -252,7 +253,6 @@ class E2UNetGenerator(nn.Module):
 
     def __init__(
         self, 
-        gspace: escnn.gspaces.GSpace,
         N: int,
         in_channels: int = 3, 
         out_channels: int = 3, 
@@ -272,7 +272,7 @@ class E2UNetGenerator(nn.Module):
         self.out_channels = out_channels
         self.image_size = image_size
         
-        self.r2_act = gspace
+        self.r2_act = escnn.gspaces.flipRot2dOnR2(N=N)
         self.G = self.r2_act.fibergroup
         self.restriction = restriction
         self.deltaorthonormal = deltaorthonormal
@@ -282,6 +282,7 @@ class E2UNetGenerator(nn.Module):
         self.r2_subgroup = r2_subgroup
         self.r3_subgroup = N
         self.N = N
+        rotations = trivial_feature_type(self.r2_act, in_channels).gspace.rotations_order
 
         self.in_type = enn.FieldType(self.r2_act, [self.r2_act.trivial_repr] * in_channels)
         in_type = self.in_type
@@ -292,9 +293,9 @@ class E2UNetGenerator(nn.Module):
             create_conv_instance(
                 trivial_feature_type(self.r2_act, in_channels),
                 regular_feature_type(self.r2_act, 64 // self.channel_div),
-                kernel_size=4,
-                padding=1,
-                stride=2,
+                kernel_size=3 if rotations in [0, 2, 4] else 5,
+                padding=1 if rotations in [0, 2, 4] else 2,
+                stride=1,
                 bias=True,
                 sigma=None,
                 frequencies_cutoff=lambda r: 3*r,
@@ -307,14 +308,12 @@ class E2UNetGenerator(nn.Module):
         self.down1 = E2DownConvNormAct(
             in_type=regular_feature_type(self.r2_act, 64 // self.channel_div),
             out_type=regular_feature_type(self.r2_act, 128 // self.channel_div),
-            residual=False,
         )
         in_type = self.down1.out_type
         
         self.down2 = E2DownConvNormAct(
             in_type=regular_feature_type(self.r2_act, 128 // self.channel_div),
             out_type=regular_feature_type(self.r2_act, 256 // self.channel_div),
-            residual=False,
         )
         in_type = self.down2.out_type
 
@@ -325,14 +324,13 @@ class E2UNetGenerator(nn.Module):
             self.add_module("r1", restriction_layer)
             self.r1 = restriction_layer
         else:
-            self.r1 = enn.IdentityModule()
+            self.r1 = enn.IdentityModule(in_type)
             self.r1_gspace = self.r2_act
             self.r1_G = self.G
         
         self.down3 = E2DownConvNormAct(
-            in_type=regular_feature_type(self.r1_gspace, 256 // self.channel_div),
+            in_type=self.r1.out_type,
             out_type=regular_feature_type(self.r1_gspace, 512 // self.channel_div),
-            residual=False,
         )
         in_type = self.down3.out_type
 
@@ -343,14 +341,13 @@ class E2UNetGenerator(nn.Module):
             self.add_module("r2", restriction_layer)
             self.r2 = restriction_layer
         else:
-            self.r2 = enn.IdentityModule()
+            self.r2 = enn.IdentityModule(in_type)
             self.r2_gspace = self.r1_gspace
             self.r2_G = self.r1_G
         
         self.down4 = E2DownConvNormAct(
-            in_type=regular_feature_type(self.r2_gspace, 512 // self.channel_div),
+            in_type=self.r2.out_type,
             out_type=regular_feature_type(self.r2_gspace, 512 // self.channel_div),
-            residual=False,
         )
         in_type = self.down4.out_type
 
@@ -361,42 +358,46 @@ class E2UNetGenerator(nn.Module):
             self.add_module("r3", restriction_layer)
             self.r3 = restriction_layer
         else:
-            self.r3 = enn.IdentityModule()
+            self.r3 = enn.IdentityModule(in_type)
             self.r3_gspace = self.r2_gspace
             self.r3_G = self.r2_G
 
         # upsample
         self.up1 = E2UpConvNormDropAct(
-            in_type=regular_feature_type(self.r3_gspace, 512 // self.channel_div),
-            res_type=self.down3.out_type,
+            in_type=self.r3.out_type,
+            res_type=self.r2.out_type,
             conv_out_type=regular_feature_type(self.r3_gspace, 512 // self.channel_div),
             out_type=regular_feature_type(self.r3_gspace, 1024 // self.channel_div),
             residual=True,
         )
+        self.up1.out_type = regular_feature_type(self.r3_gspace, self.up1.restrict.out_type.size + self.up1.conv.out_type.size)
         
         self.up2 = E2UpConvNormDropAct(
-            in_type=regular_feature_type(self.r3_gspace, 1024 // self.channel_div),
-            res_type=self.down2.out_type,
+            in_type=self.up1.out_type,
+            res_type=self.r1.out_type,
             conv_out_type=regular_feature_type(self.r3_gspace, 256 // self.channel_div),
             out_type=regular_feature_type(self.r3_gspace, 512 // self.channel_div),
             residual=True,
         )
+        self.up2.out_type = regular_feature_type(self.r3_gspace, self.up2.restrict.out_type.size + self.up2.conv.out_type.size)
 
         self.up3 = E2UpConvNormDropAct(
-            in_type=regular_feature_type(self.r3_gspace, 512 // self.channel_div),
+            in_type=self.up2.out_type,
             res_type=self.down1.out_type,
             conv_out_type=regular_feature_type(self.r3_gspace, 128 // self.channel_div),
             out_type=regular_feature_type(self.r3_gspace, 256 // self.channel_div),
             residual=True,
         )
+        self.up3.out_type = regular_feature_type(self.r3_gspace, self.up3.restrict.out_type.size + self.up3.conv.out_type.size)
 
         self.up4 = E2UpConvNormDropAct(
-            in_type=regular_feature_type(self.r3_gspace, 256 // self.channel_div),
+            in_type=self.up3.out_type,
             res_type=regular_feature_type(self.r2_act, 64 // self.channel_div),
             conv_out_type=regular_feature_type(self.r3_gspace, 64 // self.channel_div),
             out_type=regular_feature_type(self.r3_gspace, 128 // self.channel_div),
             residual=True,
         )
+        self.up4.out_type = regular_feature_type(self.r3_gspace, self.up4.restrict.out_type.size + self.up4.conv.out_type.size)
 
         self.outc = create_conv_instance(
             self.up4.out_type,

@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from equivariantgan.gan.pix2pix.generator import DownConvNormAct
+from equivariantgan.gan.pix2pix.generator import DownConvNormAct, named_apply, init_weights
 
 
 class UNetDiscriminator(nn.Module):
@@ -50,12 +50,13 @@ class UNetDiscriminator(nn.Module):
 
         self.outc = nn.Sequential(
             nn.Conv2d(
-                in_channels=128, 
+                in_channels=512, 
                 out_channels=out_channels, 
                 kernel_size=1
             ),
             nn.Sigmoid()
         )
+        named_apply(init_weights, self)
 
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
