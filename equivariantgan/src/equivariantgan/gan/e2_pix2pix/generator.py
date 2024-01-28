@@ -268,7 +268,7 @@ class E2UNetGenerator(nn.Module):
     ) -> None:
         super().__init__()
 
-        assert image_size in [32, 64, 128, 256]
+        # assert image_size in [32, 64, 128, 256]
 
         self.in_channels = in_channels
         self.out_channels = out_channels

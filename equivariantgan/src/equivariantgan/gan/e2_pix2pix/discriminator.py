@@ -29,7 +29,7 @@ class E2UNetDiscriminator(nn.Module):
     ) -> None:
         super().__init__()
 
-        assert image_size in [32, 64, 128, 256]
+        # assert image_size in [32, 64, 128, 256]
 
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -45,7 +45,7 @@ class E2UNetDiscriminator(nn.Module):
         self.r2_subgroup = r2_subgroup
         self.r3_subgroup = N
         self.N = N
-        rotations = in_type.gspace.rotations_order
+        rotations = enn.FieldType(self.r2_act, [self.r2_act.trivial_repr] * in_channels).gspace.rotations_order
 
         self.in_type = enn.FieldType(self.r2_act, [self.r2_act.trivial_repr] * in_channels)
 
