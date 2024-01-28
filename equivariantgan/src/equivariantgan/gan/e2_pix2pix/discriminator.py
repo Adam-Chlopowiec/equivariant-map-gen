@@ -52,7 +52,7 @@ class E2UNetDiscriminator(nn.Module):
         self.inc = enn.SequentialModule(
             create_conv_instance(
                 trivial_feature_type(self.r2_act, in_channels),
-                regular_feature_type(self.r2_act, 64 // self.channel_div),
+                regular_feature_type(self.r2_act, int(64 // self.channel_div)),
                 kernel_size=4,
                 padding=1,
                 stride=2,
@@ -61,13 +61,13 @@ class E2UNetDiscriminator(nn.Module):
                 frequencies_cutoff=lambda r: 3*r,
                 conv_type="r2conv"
             ),
-            enn.LeakyReLU(regular_feature_type(self.r2_act, 64 // self.channel_div), 0.2)
+            enn.LeakyReLU(regular_feature_type(self.r2_act, int(64 // self.channel_div)), 0.2)
         )
 
         # downblock
         self.down1 = E2DownConvNormAct(
-            in_type=regular_feature_type(self.r2_act, 64 // self.channel_div),
-            out_type=regular_feature_type(self.r2_act, 128 // self.channel_div),
+            in_type=regular_feature_type(self.r2_act, int(64 // self.channel_div)),
+            out_type=regular_feature_type(self.r2_act, int(128 // self.channel_div)),
         )
         in_type = self.down1.out_type
 
@@ -84,7 +84,7 @@ class E2UNetDiscriminator(nn.Module):
         
         self.down2 = E2DownConvNormAct(
             in_type=self.r1.out_type,
-            out_type=regular_feature_type(self.r1_gspace, 256 // self.channel_div),
+            out_type=regular_feature_type(self.r1_gspace, int(256 // self.channel_div)),
         )
         in_type = self.down2.out_type
 
@@ -101,7 +101,7 @@ class E2UNetDiscriminator(nn.Module):
 
         self.down3 = E2DownConvNormAct(
             in_type=self.r2.out_type,
-            out_type=regular_feature_type(self.r2_gspace, 512 // self.channel_div),
+            out_type=regular_feature_type(self.r2_gspace, int(512 // self.channel_div)),
         )
         in_type = self.down3.out_type
 

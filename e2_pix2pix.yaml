@@ -1,5 +1,5 @@
 datamodule:
-  data_root: /Users/adamchlopowiec/Desktop/studia/magisterskie/semestr2/pdp/equivariant-map-gen/equivariantgan/storage/data
+  data_root: /home/adrian/pdp/equivariant-map-gen/equivariantgan/storage/data
   target_size: 256
   num_workers: 8
   batch_size: 8
@@ -8,24 +8,24 @@ lightning_model:
   gan_type: e2_pix2pix
   generator:
     N: 4
-    in_channels: 1
-    out_channels: 1
+    in_channels: 3
+    out_channels: 3
     image_size: 256
     restriction: 3
     deltaorthonormal: False
-    channel_div: 2
+    channel_div: 1.3
     to_trivial: True
     r1_subgroup: 2
     r2_subgroup: 4
 
   discriminator:
     N: 4
-    in_channels: 2
+    in_channels: 6
     out_channels: 1
     image_size: 256
     restriction: 3
     deltaorthonormal: False
-    channel_div: 2
+    channel_div: 1.3
     to_trivial: True
     r1_subgroup: 2
     r2_subgroup: 4
@@ -34,14 +34,14 @@ lightning_model:
   lambda_l1: 100.0
   AtoB: True
   lr_g: 0.0002
-  lr_d: 0.0002
+  lr_d: 0.0001
 
 logger:
   project: map_gan
   entity: adamchlopowiec
   log_model: True
   mode: online
-  save_dir: /Users/adamchlopowiec/Desktop/studia/magisterskie/semestr2/pdp/equivariant-map-gen/equivariantgan/storage/data
+  save_dir: /home/adrian/pdp/equivariant-map-gen/equivariantgan/storage/data
 
 callbacks:
   model_checkpoint:
@@ -50,11 +50,11 @@ callbacks:
 
 training:
   trainer:
-    accelerator: cpu
-    devices: 1
+    accelerator: gpu
+    devices: [0]
     min_epochs: 1
     max_epochs: 500
-    precision: 32
+    precision: 16-mixed
     strategy: auto
     inference_mode: True
     deterministic: warn

@@ -292,7 +292,7 @@ class E2UNetGenerator(nn.Module):
         self.inc = enn.SequentialModule(
             create_conv_instance(
                 trivial_feature_type(self.r2_act, in_channels),
-                regular_feature_type(self.r2_act, 64 // self.channel_div),
+                regular_feature_type(self.r2_act, int(64 // self.channel_div)),
                 kernel_size=3 if rotations in [0, 2, 4] else 5,
                 padding=1 if rotations in [0, 2, 4] else 2,
                 stride=1,
@@ -301,19 +301,19 @@ class E2UNetGenerator(nn.Module):
                 frequencies_cutoff=lambda r: 3*r,
                 conv_type="r2conv"
             ),
-            enn.LeakyReLU(regular_feature_type(self.r2_act, 64 // self.channel_div), 0.2)
+            enn.LeakyReLU(regular_feature_type(self.r2_act, int(64 // self.channel_div)), 0.2)
         )
 
         # downblock
         self.down1 = E2DownConvNormAct(
-            in_type=regular_feature_type(self.r2_act, 64 // self.channel_div),
-            out_type=regular_feature_type(self.r2_act, 128 // self.channel_div),
+            in_type=regular_feature_type(self.r2_act, int(64 // self.channel_div)),
+            out_type=regular_feature_type(self.r2_act, int(128 // self.channel_div)),
         )
         in_type = self.down1.out_type
         
         self.down2 = E2DownConvNormAct(
-            in_type=regular_feature_type(self.r2_act, 128 // self.channel_div),
-            out_type=regular_feature_type(self.r2_act, 256 // self.channel_div),
+            in_type=regular_feature_type(self.r2_act, int(128 // self.channel_div)),
+            out_type=regular_feature_type(self.r2_act, int(256 // self.channel_div)),
         )
         in_type = self.down2.out_type
 
@@ -330,7 +330,7 @@ class E2UNetGenerator(nn.Module):
         
         self.down3 = E2DownConvNormAct(
             in_type=self.r1.out_type,
-            out_type=regular_feature_type(self.r1_gspace, 512 // self.channel_div),
+            out_type=regular_feature_type(self.r1_gspace, int(512 // self.channel_div)),
         )
         in_type = self.down3.out_type
 
@@ -347,7 +347,7 @@ class E2UNetGenerator(nn.Module):
         
         self.down4 = E2DownConvNormAct(
             in_type=self.r2.out_type,
-            out_type=regular_feature_type(self.r2_gspace, 512 // self.channel_div),
+            out_type=regular_feature_type(self.r2_gspace, int(512 // self.channel_div)),
         )
         in_type = self.down4.out_type
 
@@ -366,8 +366,8 @@ class E2UNetGenerator(nn.Module):
         self.up1 = E2UpConvNormDropAct(
             in_type=self.r3.out_type,
             res_type=self.r2.out_type,
-            conv_out_type=regular_feature_type(self.r3_gspace, 512 // self.channel_div),
-            out_type=regular_feature_type(self.r3_gspace, 1024 // self.channel_div),
+            conv_out_type=regular_feature_type(self.r3_gspace, int(512 // self.channel_div)),
+            out_type=regular_feature_type(self.r3_gspace, int(1024 // self.channel_div)),
             residual=True,
         )
         self.up1.out_type = regular_feature_type(self.r3_gspace, self.up1.restrict.out_type.size + self.up1.conv.out_type.size)
@@ -375,8 +375,8 @@ class E2UNetGenerator(nn.Module):
         self.up2 = E2UpConvNormDropAct(
             in_type=self.up1.out_type,
             res_type=self.r1.out_type,
-            conv_out_type=regular_feature_type(self.r3_gspace, 256 // self.channel_div),
-            out_type=regular_feature_type(self.r3_gspace, 512 // self.channel_div),
+            conv_out_type=regular_feature_type(self.r3_gspace, int(256 // self.channel_div)),
+            out_type=regular_feature_type(self.r3_gspace, int(512 // self.channel_div)),
             residual=True,
         )
         self.up2.out_type = regular_feature_type(self.r3_gspace, self.up2.restrict.out_type.size + self.up2.conv.out_type.size)
@@ -384,17 +384,17 @@ class E2UNetGenerator(nn.Module):
         self.up3 = E2UpConvNormDropAct(
             in_type=self.up2.out_type,
             res_type=self.down1.out_type,
-            conv_out_type=regular_feature_type(self.r3_gspace, 128 // self.channel_div),
-            out_type=regular_feature_type(self.r3_gspace, 256 // self.channel_div),
+            conv_out_type=regular_feature_type(self.r3_gspace, int(128 // self.channel_div)),
+            out_type=regular_feature_type(self.r3_gspace, int(256 // self.channel_div)),
             residual=True,
         )
         self.up3.out_type = regular_feature_type(self.r3_gspace, self.up3.restrict.out_type.size + self.up3.conv.out_type.size)
 
         self.up4 = E2UpConvNormDropAct(
             in_type=self.up3.out_type,
-            res_type=regular_feature_type(self.r2_act, 64 // self.channel_div),
-            conv_out_type=regular_feature_type(self.r3_gspace, 64 // self.channel_div),
-            out_type=regular_feature_type(self.r3_gspace, 128 // self.channel_div),
+            res_type=regular_feature_type(self.r2_act, int(64 // self.channel_div)),
+            conv_out_type=regular_feature_type(self.r3_gspace, int(64 // self.channel_div)),
+            out_type=regular_feature_type(self.r3_gspace, int(128 // self.channel_div)),
             residual=True,
         )
         self.up4.out_type = regular_feature_type(self.r3_gspace, self.up4.restrict.out_type.size + self.up4.conv.out_type.size)

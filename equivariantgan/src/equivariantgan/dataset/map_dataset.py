@@ -8,6 +8,7 @@ import pandas as pd
 import torch
 import hydra
 import glob
+import imageio
 from PIL import Image
 from pydantic import BaseModel
 from torch.utils.data import DataLoader, Dataset
@@ -32,10 +33,10 @@ class MapDataset(Dataset):
             # T.PILToTensor(),
             # T.ConvertImageDtype(torch.float),
             T.Normalize(
-                # [0.5, 0.5, 0.5],
-                # [0.5, 0.5, 0.5]
-                [0.5],
-                [0.5]
+                [0.5, 0.5, 0.5],
+                [0.5, 0.5, 0.5]
+                # [0.5],
+                # [0.5]
             )
         ])
         
@@ -46,9 +47,10 @@ class MapDataset(Dataset):
         return len(self.terrain_paths)
     
     def _getimg(self, path: str) -> torch.Tensor:
-        img = Image.open(path)
-        # img_np = np.asarray(img)
-        # print(img_np.shape)
+        # img = Image.open(path)
+        img = imageio.imread(path)
+        img = np.asarray(img, dtype=np.uint8)
+        img = Image.fromarray(img)
         return self.transforms(img)
     
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:

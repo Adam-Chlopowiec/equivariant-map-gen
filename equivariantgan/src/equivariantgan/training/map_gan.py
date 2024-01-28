@@ -76,10 +76,10 @@ class MapGan(pl.LightningModule):
         self.lambda_l1 = lambda_l1
         self.AtoB = AtoB
         self.denormalize = T.Normalize(
-            # [-1, -1, -1],
-            # [2, 2, 2]
-            [-1],
-            [2]
+            [-1, -1, -1],
+            [2, 2, 2]
+            # [-1],
+            # [2]
         )
         self.automatic_optimization = False
         
@@ -218,6 +218,7 @@ class MapGan(pl.LightningModule):
         fake_B = self.forward(real_A)
         fake = self.denormalize(fake_B)
         real_B = self.denormalize(real_B)
+        real_A = self.denormalize(real_A)
         
         grid = make_grid(fake, nrow=4).permute(1, 2, 0).cpu().numpy()
         grid = (grid * 255.).astype(np.uint8)
@@ -250,11 +251,31 @@ class MapGan(pl.LightningModule):
         
     def on_validation_epoch_end(self, *args, **kwargs) -> None:
         batch = next(iter(self.trainer.datamodule.val_dataloader()))
-        real_A = batch['terrain' if self.AtoB == 'AtoB' else 'roadmap']
-        fake_B = self.G(real_A)
+        
+        real_A = batch['terrain' if self.AtoB else 'roadmap'].to(self.device)
+        real_B = batch['roadmap' if self.AtoB else 'terrain'].to(self.device)
+        fake_B = self.forward(real_A)
         fake = self.denormalize(fake_B)
+        real_B = self.denormalize(real_B)
+        real_A = self.denormalize(real_A)
         
         grid = make_grid(fake, nrow=4).permute(1, 2, 0).cpu().numpy()
         grid = (grid * 255.).astype(np.uint8)
         grid = Image.fromarray(grid)
-        self.logger.log_image(key='val/fake', images=[grid])
+        self.logger.log_image(key='val/fake', images=[grid])  
+        
+        grid = make_grid(real_B, nrow=4).permute(1, 2, 0).cpu().numpy()
+        grid = (grid * 255.).astype(np.uint8)
+        grid = Image.fromarray(grid)
+        self.logger.log_image(key='val/real_B', images=[grid])
+        
+        grid = make_grid(real_A, nrow=4).permute(1, 2, 0).cpu().numpy()
+        grid = (grid * 255.).astype(np.uint8)
+        grid = Image.fromarray(grid)
+        self.logger.log_image(key='val/real_A', images=[grid])
+        
+        cat = torch.cat((fake, real_B), 0)
+        grid = make_grid(cat, nrow=8).permute(1, 2, 0).cpu().numpy()
+        grid = (grid * 255.).astype(np.uint8)
+        grid = Image.fromarray(grid)
+        self.logger.log_image(key='val/fake-real', images=[grid])
