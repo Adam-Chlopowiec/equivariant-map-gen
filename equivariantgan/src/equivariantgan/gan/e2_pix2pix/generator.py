@@ -155,7 +155,7 @@ class E2UpConvNormAct(nn.Module):
                 conv_out_type,
                 kernel_size=3 if rotations in [0, 2, 4] else 5,
                 stride=2,
-                padding=1 if rotations in [0, 2, 4] else 2,
+                padding=0 if rotations in [0, 2, 4] else 1,
                 bias=False,
                 sigma=None,
                 frequencies_cutoff=lambda r: 3*r,
@@ -215,7 +215,7 @@ class E2UpConvNormDropAct(nn.Module):
                 conv_out_type,
                 kernel_size=3 if rotations in [0, 2, 4] else 5,
                 stride=2,
-                padding=1 if rotations in [0, 2, 4] else 2,
+                padding=0 if rotations in [0, 2, 4] else 1,
                 bias=False,
                 sigma=None,
                 frequencies_cutoff=lambda r: 3*r,
@@ -442,43 +442,43 @@ class E2UNetGenerator(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         in_size = x.shape
         x = self.in_type(x)
-        print(f"{x.shape=}")
+        # print(f"{x.tensor.shape=}")
         x1 = self.inc(x) # 64
-        print(f"{x1.shape=}")
+        # print(f"{x1.tensor.shape=}")
         x2 = self.down1(x1) # 128
-        print(f"{x2.shape=}")
+        # print(f"{x2.tensor.shape=}")
         x3 = self.down2(x2) # 256
         x3 = self.r1(x3)
-        print(f"{x3.shape=}")
+        # print(f"{x3.tensor.shape=}")
         x4 = self.down3(x3) # 512
         x4 = self.r2(x4)
-        print(f"{x4.shape=}")
+        # print(f"{x4.tensor.shape=}")
         x5 = self.down4(x4) # 512
         x5 = self.r3(x5)
-        print(f"{x5.shape=}")
+        # print(f"{x5.tensor.shape=}")
         
-        if x4.shape[-2:] != x5.shape[-2:]:
-            x4 = torch.nn.functional.interpolate(x4, size=x5.shape[-2:], mode="nearest-exact")
+        # if x4.shape[-2:] != x5.shape[-2:]:
+        #     x4 = torch.nn.functional.interpolate(x4, size=x5.shape[-2:], mode="nearest-exact")
         x = self.up1(x5, x4) # 512 + 512 = 1024
-        print(f"up1x.shape={x.shape}")
-        if x3.shape[-2:] != x.shape[-2:]:
-            x3 = torch.nn.functional.interpolate(x3, size=x.shape[-2:], mode="nearest-exact")
+        # print(f"up1x.shape={x.tensor.shape}")
+        # if x3.shape[-2:] != x.shape[-2:]:
+        #     x3 = torch.nn.functional.interpolate(x3, size=x.shape[-2:], mode="nearest-exact")
         x = self.up2(x, x3) # 1024->256 + 256 = 512
-        print(f"up2x.shape={x.shape}")
-        if x2.shape[-2:] != x.shape[-2:]:
-            x2 = torch.nn.functional.interpolate(x2, size=x.shape[-2:], mode="nearest-exact")
+        # print(f"up2x.shape={x.tensor.shape}")
+        # if x2.shape[-2:] != x.shape[-2:]:
+        #     x2 = torch.nn.functional.interpolate(x2, size=x.shape[-2:], mode="nearest-exact")
         x = self.up3(x, x2) # 512->128 + 128 = 256
-        print(f"up3x.shape={x.shape}")
-        if x1.shape[-2:] != x.shape[-2:]:
-            x1 = torch.nn.functional.interpolate(x1, size=x.shape[-2:], mode="nearest-exact")
+        # print(f"up3x.shape={x.tensor.shape}")
+        # if x1.shape[-2:] != x.shape[-2:]:
+        #     x1 = torch.nn.functional.interpolate(x1, size=x.shape[-2:], mode="nearest-exact")
         x = self.up4(x, x1) # 256->64 + 64 = 128
-        print(f"up4x.shape={x.shape}")
-        if in_size[-2:] != x.shape[-2:]:
-            x = torch.nn.functional.interpolate(x, size=in_size[-2:], mode="nearest-exact")
+        # print(f"up4x.shape={x.tensor.shape}")
+        # if in_size[-2:] != x.shape[-2:]:
+        #     x = torch.nn.functional.interpolate(x, size=in_size[-2:], mode="nearest-exact")
         x = self.outc(x).tensor
-        print(f"outcx.shape={x.shape}")
+        # print(f"outcx.shape={x.shape}")
         x = self.out_act(x)
-        1/0
+        # 1/0
         return x
 
 
