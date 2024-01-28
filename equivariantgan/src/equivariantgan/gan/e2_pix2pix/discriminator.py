@@ -45,6 +45,7 @@ class E2UNetDiscriminator(nn.Module):
         self.r2_subgroup = r2_subgroup
         self.r3_subgroup = N
         self.N = N
+        rotations = in_type.gspace.rotations_order
 
         self.in_type = enn.FieldType(self.r2_act, [self.r2_act.trivial_repr] * in_channels)
 
@@ -53,9 +54,9 @@ class E2UNetDiscriminator(nn.Module):
             create_conv_instance(
                 trivial_feature_type(self.r2_act, in_channels),
                 regular_feature_type(self.r2_act, int(64 // self.channel_div)),
-                kernel_size=4,
-                padding=1,
-                stride=2,
+                kernel_size=3 if rotations in [0, 2, 4] else 5,
+                padding=1 if rotations in [0, 2, 4] else 2,
+                stride=1,
                 bias=True,
                 sigma=None,
                 frequencies_cutoff=lambda r: 3*r,
@@ -63,6 +64,7 @@ class E2UNetDiscriminator(nn.Module):
             ),
             enn.LeakyReLU(regular_feature_type(self.r2_act, int(64 // self.channel_div)), 0.2)
         )
+
 
         # downblock
         self.down1 = E2DownConvNormAct(

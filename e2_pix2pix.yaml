@@ -1,6 +1,6 @@
 datamodule:
   data_root: /home/adrian/pdp/equivariant-map-gen/equivariantgan/storage/data
-  target_size: 256
+  target_size: 255
   num_workers: 8
   batch_size: 8
 
@@ -10,7 +10,7 @@ lightning_model:
     N: 4
     in_channels: 3
     out_channels: 3
-    image_size: 256
+    image_size: 255
     restriction: 3
     deltaorthonormal: False
     channel_div: 1.3
@@ -22,7 +22,7 @@ lightning_model:
     N: 4
     in_channels: 6
     out_channels: 1
-    image_size: 256
+    image_size: 255
     restriction: 3
     deltaorthonormal: False
     channel_div: 1.3

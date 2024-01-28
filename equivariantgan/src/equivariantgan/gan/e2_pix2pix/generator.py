@@ -147,14 +147,15 @@ class E2UpConvNormAct(nn.Module):
         self.out_type = out_type
         self.res_type = res_type
         self.conv_out_type = conv_out_type
+        rotations = in_type.gspace.rotations_order
 
         self.conv = enn.SequentialModule(
             create_conv_instance(
                 in_type,
                 conv_out_type,
-                kernel_size=4,
+                kernel_size=3 if rotations in [0, 2, 4] else 5,
                 stride=2,
-                padding=1,
+                padding=1 if rotations in [0, 2, 4] else 2,
                 bias=False,
                 sigma=None,
                 frequencies_cutoff=lambda r: 3*r,
@@ -206,14 +207,15 @@ class E2UpConvNormDropAct(nn.Module):
         self.out_type = out_type
         self.res_type = res_type
         self.conv_out_type = conv_out_type
+        rotations = in_type.gspace.rotations_order
 
         self.conv = enn.SequentialModule(
             create_conv_instance(
                 in_type,
                 conv_out_type,
-                kernel_size=4,
+                kernel_size=3 if rotations in [0, 2, 4] else 5,
                 stride=2,
-                padding=1,
+                padding=1 if rotations in [0, 2, 4] else 2,
                 bias=False,
                 sigma=None,
                 frequencies_cutoff=lambda r: 3*r,
