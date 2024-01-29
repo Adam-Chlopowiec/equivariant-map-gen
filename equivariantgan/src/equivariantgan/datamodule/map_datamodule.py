@@ -31,12 +31,14 @@ class MapDataModule(pl.LightningDataModule):
         target_size: int,
         num_workers: int,
         batch_size: int,
+        rotate: bool = False,
     ) -> None:
         super().__init__()
         self.data_root = data_root
         self.target_size = target_size
         self.num_workers = num_workers
         self.batch_size = batch_size
+        self.rotate = rotate
         
     def prepare_data(self) -> None:
         pass
@@ -48,7 +50,8 @@ class MapDataModule(pl.LightningDataModule):
         return DataLoader(
             MapDataset(
                 self.data_root + '/train',
-                self.target_size
+                self.target_size,
+                rotate=self.rotate
             ),
             batch_size=self.batch_size,
             num_workers=self.num_workers,
@@ -61,7 +64,8 @@ class MapDataModule(pl.LightningDataModule):
         return DataLoader(
             MapDataset(
                 self.data_root + '/test',
-                self.target_size
+                self.target_size,
+                rotate=False
             ),
             batch_size=self.batch_size,
             num_workers=self.num_workers,
@@ -74,7 +78,8 @@ class MapDataModule(pl.LightningDataModule):
         return DataLoader(
             MapDataset(
                 self.data_root + '/test',
-                self.target_size
+                self.target_size,
+                rotate=False
             ),
             batch_size=self.batch_size,
             num_workers=self.num_workers,

@@ -13,6 +13,7 @@ from omegaconf import DictConfig, OmegaConf
 from equivariantgan.datamodule.map_datamodule import MapDataModule
 from equivariantgan.dataset.map_dataset import MapDataset
 from equivariantgan.training.map_gan import MapGan
+from equivariantgan.training.map_wgan_gp import MapWGanGP
 
 
 torch.set_float32_matmul_precision('highest')
@@ -39,7 +40,10 @@ def run_experiment():
 
     # initialize model
     logger.info(f"Instantiate MapGan")
-    model = MapGan(**config["lightning_model"])
+    if config['lightning_model']['loss_gan_mode'] == 'wgan':
+        model = MapWGanGP(**config['lightning_model'])
+    else:
+        model = MapGan(**config["lightning_model"])
 
     # initalize logger
     logger.info(f"Instantiate WandbLogger")
