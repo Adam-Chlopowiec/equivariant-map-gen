@@ -3,7 +3,7 @@ datamodule:
   target_size: 256
   num_workers: 8
   batch_size: 8
-  rotate: False
+  rotate: True
 
 lightning_model:
   gan_type: pix2pix
@@ -38,7 +38,7 @@ callbacks:
 training:
   trainer:
     accelerator: gpu
-    devices: [1]
+    devices: [0]
     min_epochs: 1
     max_epochs: 500
     precision: 16-mixed

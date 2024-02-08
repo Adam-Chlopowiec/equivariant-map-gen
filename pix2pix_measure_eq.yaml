@@ -5,7 +5,25 @@ datamodule:
   batch_size: 8
   rotate: False
 
-lightning_model:
+lightning_model_no_rot:
+  gan_type: pix2pix
+  generator:
+    in_channels: 3
+    out_channels: 3
+    image_size: 256
+
+  discriminator:
+    in_channels: 6
+    out_channels: 1
+    image_size: 256
+
+  loss_gan_mode: lsgan
+  lambda_l1: 100.0
+  AtoB: False
+  lr_g: 0.0002
+  lr_d: 0.0002
+
+lightning_model_rot:
   gan_type: pix2pix
   generator:
     in_channels: 3

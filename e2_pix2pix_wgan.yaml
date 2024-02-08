@@ -1,0 +1,62 @@
+datamodule:
+  data_root: /home/adrian/pdp/equivariant-map-gen/equivariantgan/storage/data
+  target_size: 255
+  num_workers: 8
+  batch_size: 4
+
+lightning_model:
+  gan_type: e2_pix2pix
+  generator:
+    N: 4
+    in_channels: 3
+    out_channels: 3
+    image_size: 255
+    restriction: 3
+    deltaorthonormal: False
+    channel_div: 1.6
+    to_trivial: True
+    r1_subgroup: 2
+    r2_subgroup: 4
+
+  discriminator:
+    N: 4
+    in_channels: 6
+    out_channels: 1
+    image_size: 255
+    restriction: 3
+    deltaorthonormal: False
+    channel_div: 1.3
+    to_trivial: True
+    r1_subgroup: 2
+    r2_subgroup: 4
+
+  loss_gan_mode: wgan
+  lambda_gp: 10.
+  lambda_l1: 100.0
+  AtoB: True
+  lr_g: 0.0002
+  lr_d: 0.0002
+  g_n_steps: 5
+
+logger:
+  project: map_gan
+  entity: adamchlopowiec
+  log_model: True
+  mode: online
+  save_dir: /home/adrian/pdp/equivariant-map-gen/equivariantgan/storage/data
+
+callbacks:
+  model_checkpoint:
+    verbose: True
+    every_n_epochs: 5
+
+training:
+  trainer:
+    accelerator: gpu
+    devices: [0]
+    min_epochs: 1
+    max_epochs: 500
+    precision: 16-mixed
+    strategy: auto
+    inference_mode: True
+    deterministic: warn
